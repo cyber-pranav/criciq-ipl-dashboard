@@ -125,21 +125,9 @@ export async function askCricIQ(userMessage, context = '') {
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      // Explicit status code logging for diagnostics
-      if (res.status === 401) {
-        console.error('[CricIQ] Gemini 401 — invalid API key:', errData);
-        return 'API key error — please check your Gemini API key configuration.';
-      }
-      if (res.status === 429) {
-        console.error('[CricIQ] Gemini 429 — rate limit exceeded:', errData);
-        return 'I\'m getting too many questions right now! Give me a moment and try again.';
-      }
-      if (res.status === 400) {
-        console.error('[CricIQ] Gemini 400 — bad request:', errData);
-        return 'Something went wrong with that question. Could you rephrase it?';
-      }
+      const rawMsg = errData?.error?.message || `HTTP ${res.status}`;
       console.error('[CricIQ] Gemini API error:', res.status, errData);
-      return 'Sorry, I\'m having trouble connecting to my brain right now. Try again in a moment!';
+      throw new Error(`API ${res.status}: ${rawMsg}`);
     }
 
     const data = await res.json();
@@ -154,12 +142,8 @@ export async function askCricIQ(userMessage, context = '') {
     return trimmed;
   } catch (err) {
     clearTimeout(timeoutId);
-    if (err.name === 'AbortError') {
-      console.error('[CricIQ] Gemini request timed out after', API_TIMEOUT_MS, 'ms');
-      return 'The AI is taking too long to respond. Please try again.';
-    }
-    console.error('[CricIQ] Gemini fetch failed:', err);
-    return 'Network error — please check your connection and try again.';
+    console.error('[CricIQ] Raw error:', err);
+    return `DEBUG ERROR: ${err.message}`;
   }
 }
 

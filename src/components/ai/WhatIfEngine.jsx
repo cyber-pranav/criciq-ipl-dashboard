@@ -50,6 +50,71 @@ function parseSections(text) {
 }
 
 /**
+ * Custom renderer for alternate timeline responses to guarantee text contrast,
+ * format headings dynamically, and avoid any manual truncation.
+ */
+function renderTimelineText(text) {
+  if (!text) return null;
+  const lines = text.split('\n');
+  return (
+    <div className="text-slate-200 leading-relaxed space-y-3">
+      {lines.map((line, idx) => {
+        const cleanLine = line.replace(/[*#_\-:]/g, '').trim();
+        const lower = cleanLine.toLowerCase();
+
+        if (lower.includes('impact on match flow') || lower === 'impact on match') {
+          return (
+            <span key={idx} className="text-cyan-400 font-bold block mt-4 mb-1 text-xs">
+              📉 IMPACT ON MATCH FLOW
+            </span>
+          );
+        }
+        if (lower.includes('probability shift') || lower === 'probability') {
+          return (
+            <span key={idx} className="text-cyan-400 font-bold block mt-4 mb-1 text-xs">
+              🎲 PROBABILITY SHIFT
+            </span>
+          );
+        }
+        if (lower.includes('ripple effects') || lower === 'ripple effect' || lower === 'ripple') {
+          return (
+            <span key={idx} className="text-cyan-400 font-bold block mt-4 mb-1 text-xs">
+              🔄 RIPPLE EFFECTS
+            </span>
+          );
+        }
+        if (lower.includes('revised outcome') || lower === 'outcome' || lower === 'final result') {
+          return (
+            <span key={idx} className="text-cyan-400 font-bold block mt-4 mb-1 text-xs">
+              📋 REVISED OUTCOME
+            </span>
+          );
+        }
+
+        // Render bullet points or regular text
+        if (line.trim().startsWith('*') || line.trim().startsWith('-')) {
+          return (
+            <li key={idx} className="ml-4 list-disc text-xs text-slate-200 leading-relaxed">
+              {line.replace(/^[*-\s]+/, '')}
+            </li>
+          );
+        }
+
+        if (!line.trim()) {
+          return <div key={idx} className="h-1" />;
+        }
+
+        return (
+          <p key={idx} className="text-xs text-slate-200 leading-relaxed">
+            {line}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
  * What-If Engine — two-panel AI scenario simulator.
  * Left: match selection + scenario input. Right: 4-section structured results.
  */
@@ -89,7 +154,7 @@ Format your response with EXACTLY these 4 sections (use these exact headers):
       const response = await askCricIQ(prompt);
       setResult({ sections: parseSections(response), raw: response });
     } catch {
-      setResult({ sections: { impact: '⚠ Simulation failed. Please try again.' }, raw: '' });
+      setResult({ sections: { impact: '⚠ Simulation failed. Please try again.' }, raw: '⚠ Simulation failed. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -151,51 +216,34 @@ Format your response with EXACTLY these 4 sections (use these exact headers):
       </div>
 
       {/* Right panel — Structured Results */}
-      <div className="bg-surface border border-border rounded-xl p-4">
-        <h3 className="text-sm font-bold text-text mb-3">Alternate Timeline</h3>
+      <div className="bg-surface border border-border rounded-xl p-4 flex flex-col h-[500px]">
+        <h3 className="text-sm font-bold text-text mb-3 flex-shrink-0">Alternate Timeline</h3>
 
-        {loading && (
-          <div className="space-y-4">
-            {RESULT_SECTIONS.map((s) => (
-              <div key={s.key} className="space-y-1.5">
-                <div className="skeleton h-3 w-32 rounded" />
-                <div className="skeleton h-3 w-full rounded" />
-                <div className="skeleton h-3 w-4/5 rounded" />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!loading && !result && (
-          <p className="text-xs text-muted italic">
-            Pick a match and describe your "what if" scenario to generate an alternate timeline.
-          </p>
-        )}
-
-        {!loading && result && (
-          <div className="space-y-3">
-            {RESULT_SECTIONS.map((s) => {
-              const content = result.sections[s.key];
-              if (!content) return null;
-              return (
-                <div
-                  key={s.key}
-                  className="p-3 rounded-lg bg-[#0D121F] border border-border"
-                >
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span className="text-xs">{s.icon}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-400">
-                      {s.label}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap">
-                    {content}
-                  </p>
+        <div className="flex-1 overflow-y-auto pr-1">
+          {loading && (
+            <div className="space-y-4">
+              {RESULT_SECTIONS.map((s) => (
+                <div key={s.key} className="space-y-1.5">
+                  <div className="skeleton h-3 w-32 rounded" />
+                  <div className="skeleton h-3 w-full rounded" />
+                  <div className="skeleton h-3 w-4/5 rounded" />
                 </div>
-              );
-            })}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+
+          {!loading && !result && (
+            <p className="text-xs text-muted italic">
+              Pick a match and describe your "what if" scenario to generate an alternate timeline.
+            </p>
+          )}
+
+          {!loading && result && (
+            <div className="p-4 rounded-lg bg-[#0D121F] border border-border text-slate-200 leading-relaxed space-y-4">
+              {renderTimelineText(result.raw)}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

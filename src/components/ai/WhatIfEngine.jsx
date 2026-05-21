@@ -50,71 +50,6 @@ function parseSections(text) {
 }
 
 /**
- * Custom renderer for alternate timeline responses to guarantee text contrast,
- * format headings dynamically, and avoid any manual truncation.
- */
-function renderTimelineText(text) {
-  if (!text) return null;
-  const lines = text.split('\n');
-  return (
-    <div className="text-slate-200 leading-relaxed space-y-3">
-      {lines.map((line, idx) => {
-        const cleanLine = line.replace(/[*#_\-:]/g, '').trim();
-        const lower = cleanLine.toLowerCase();
-
-        if (lower.includes('impact on match flow') || lower === 'impact on match') {
-          return (
-            <span key={idx} className="text-cyan-400 font-bold block mt-4 mb-1 text-xs">
-              📉 IMPACT ON MATCH FLOW
-            </span>
-          );
-        }
-        if (lower.includes('probability shift') || lower === 'probability') {
-          return (
-            <span key={idx} className="text-cyan-400 font-bold block mt-4 mb-1 text-xs">
-              🎲 PROBABILITY SHIFT
-            </span>
-          );
-        }
-        if (lower.includes('ripple effects') || lower === 'ripple effect' || lower === 'ripple') {
-          return (
-            <span key={idx} className="text-cyan-400 font-bold block mt-4 mb-1 text-xs">
-              🔄 RIPPLE EFFECTS
-            </span>
-          );
-        }
-        if (lower.includes('revised outcome') || lower === 'outcome' || lower === 'final result') {
-          return (
-            <span key={idx} className="text-cyan-400 font-bold block mt-4 mb-1 text-xs">
-              📋 REVISED OUTCOME
-            </span>
-          );
-        }
-
-        // Render bullet points or regular text
-        if (line.trim().startsWith('*') || line.trim().startsWith('-')) {
-          return (
-            <li key={idx} className="ml-4 list-disc text-xs text-slate-200 leading-relaxed">
-              {line.replace(/^[*-\s]+/, '')}
-            </li>
-          );
-        }
-
-        if (!line.trim()) {
-          return <div key={idx} className="h-1" />;
-        }
-
-        return (
-          <p key={idx} className="text-xs text-slate-200 leading-relaxed">
-            {line}
-          </p>
-        );
-      })}
-    </div>
-  );
-}
-
-/**
  * What-If Engine — two-panel AI scenario simulator.
  * Left: match selection + scenario input. Right: 4-section structured results.
  */
@@ -239,8 +174,8 @@ Format your response with EXACTLY these 4 sections (use these exact headers):
           )}
 
           {!loading && result && (
-            <div className="p-4 rounded-lg bg-[#0D121F] border border-border text-slate-200 leading-relaxed space-y-4">
-              {renderTimelineText(result.raw)}
+            <div className="text-slate-100 whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[500px] p-4 bg-[#0D121F] border border-border rounded-lg text-xs">
+              {result.raw}
             </div>
           )}
         </div>

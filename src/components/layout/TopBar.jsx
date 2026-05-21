@@ -1,6 +1,7 @@
 import React from 'react';
-import { IconSearch } from '@tabler/icons-react';
+import { IconSearch, IconCommand } from '@tabler/icons-react';
 import useIPLStore from '../../store/useIPLStore';
+import ThemeToggle from '../ui/ThemeToggle';
 
 const seasons = Array.from({ length: 17 }, (_, i) => 2008 + i);
 
@@ -27,7 +28,7 @@ export default function TopBar() {
         </select>
       </div>
 
-      {/* Search */}
+      {/* Search with Cmd+K hint */}
       <div className="flex-1 max-w-md relative">
         <IconSearch
           size={16}
@@ -39,9 +40,15 @@ export default function TopBar() {
           value={searchQuery || ''}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search players, teams, matches..."
-          className="w-full bg-surface text-text text-sm border border-border rounded-lg pl-9 pr-4 py-2 outline-none focus:border-cyan transition-colors placeholder:text-muted"
+          className="w-full bg-surface text-text text-sm border border-border rounded-lg pl-9 pr-16 py-2 outline-none focus:border-cyan transition-colors placeholder:text-muted"
         />
+        <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-muted text-[10px] bg-navy border border-border rounded px-1.5 py-0.5 font-mono">
+          ⌘K
+        </kbd>
       </div>
+
+      {/* Theme toggle */}
+      <ThemeToggle />
 
       {/* Live indicator */}
       <div className="flex items-center gap-2 shrink-0">

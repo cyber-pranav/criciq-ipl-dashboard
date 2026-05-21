@@ -1,11 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import {
   IconChevronDown,
   IconSwords,
   IconSparkles,
-  IconTrendingUp,
-  IconArrowRight,
 } from '@tabler/icons-react';
 import {
   AreaChart,
@@ -17,9 +14,11 @@ import {
   CartesianGrid,
 } from 'recharts';
 import useIPLStore from '../store/useIPLStore';
-import { getHeadToHead } from '../services/iplData';
+import { getHeadToHead, MATCHES_DATA } from '../services/iplData';
 import { askCricIQ } from '../services/gemini';
 import { formatNumber } from '../utils/formatters';
+import LockerRoomReport from '../components/ai/LockerRoomReport';
+import WinProbabilityChart from '../components/charts/WinProbabilityChart';
 
 /* ━━━ Constants ━━━ */
 const TEAMS = [
@@ -62,6 +61,7 @@ export default function HeadToHead() {
   const [loading, setLoading] = useState(false);
   const [aiPrediction, setAiPrediction] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [showLockerRoom, setShowLockerRoom] = useState(false);
 
   const teamAInfo = TEAMS.find((t) => t.id === teamA) || TEAMS[0];
   const teamBInfo = TEAMS.find((t) => t.id === teamB) || TEAMS[1];
@@ -74,8 +74,8 @@ export default function HeadToHead() {
     }
     setLoading(true);
     setAiPrediction('');
+    setShowLockerRoom(false);
     const raw = getHeadToHead(teamAInfo.shortName, teamBInfo.shortName);
-    // Map to component's expected shape
     const mapped = {
       teamAWins: raw.team1Wins,
       teamBWins: raw.team2Wins,
@@ -129,16 +129,23 @@ export default function HeadToHead() {
     })).reverse();
   }, [data]);
 
-  /* ── Key player battles ── */
-  const battles = useMemo(() => {
-    return data?.keyBattles || [];
-  }, [data]);
+  /* ── Most recent match for Win Probability ── */
+  const mostRecentMatch = useMemo(() => {
+    if (!data?.encounters?.length) return null;
+    const enc = data.encounters[0];
+    return {
+      team1: teamAInfo.shortName,
+      team2: teamBInfo.shortName,
+      winner: enc.winner,
+      win_by_runs: enc.marginType === 'runs' ? enc.margin : 0,
+      win_by_wickets: enc.marginType === 'wickets' ? enc.margin : 0,
+    };
+  }, [data, teamAInfo, teamBInfo]);
 
   return (
     <div className="space-y-6">
       {/* ── Team Selectors ── */}
       <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-        {/* Team A */}
         <div className="flex-1 w-full">
           <div className="relative">
             <select
@@ -154,12 +161,10 @@ export default function HeadToHead() {
           </div>
         </div>
 
-        {/* VS Badge */}
         <div className="flex items-center justify-center w-14 h-14 rounded-full border-2 border-border bg-surface flex-shrink-0">
           <span className="text-amber font-bold text-lg">VS</span>
         </div>
 
-        {/* Team B */}
         <div className="flex-1 w-full">
           <div className="relative">
             <select
@@ -268,33 +273,15 @@ export default function HeadToHead() {
             )}
           </div>
 
-          {/* ── Key Player Battles ── */}
-          <div className="bg-surface border border-border rounded-lg p-5">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted mb-4">
-              Key Player Battles
-            </h2>
-            {battles.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {battles.map((b, idx) => (
-                  <div key={idx} className="flex items-center gap-3 bg-navy border border-border rounded-lg p-3">
-                    <div className="flex-1 text-right">
-                      <p className="text-sm font-medium text-text">{b.player1 || b.batsman}</p>
-                      <p className="text-xs text-muted capitalize">{b.role1 || 'Batsman'}</p>
-                    </div>
-                    <div className="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center flex-shrink-0">
-                      <IconSwords size={14} className="text-amber" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-text">{b.player2 || b.bowler}</p>
-                      <p className="text-xs text-muted capitalize">{b.role2 || 'Bowler'}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted text-sm">No battle data available</p>
-            )}
-          </div>
+          {/* ── Win Probability Timeline ── */}
+          {mostRecentMatch && (
+            <div className="bg-surface border border-border rounded-lg p-5">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted mb-4">
+                ⚡ Win Probability Timeline — Last Match
+              </h2>
+              <WinProbabilityChart match={mostRecentMatch} />
+            </div>
+          )}
 
           {/* ── Run Margin Over Time ── */}
           <div className="bg-surface border border-border rounded-lg p-5">
@@ -321,6 +308,28 @@ export default function HeadToHead() {
               </ResponsiveContainer>
             ) : (
               <p className="text-muted text-sm">No margin data available</p>
+            )}
+          </div>
+
+          {/* ── 🔒 Locker Room: Pre-Match Scout Report ── */}
+          <div className="bg-surface border border-border rounded-lg p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
+                🔒 Locker Room — Pre-Match Scout
+              </h2>
+              <button
+                onClick={() => setShowLockerRoom(!showLockerRoom)}
+                className="text-xs text-cyan hover:underline font-medium"
+              >
+                {showLockerRoom ? 'Hide Report' : 'Generate Scout Report'}
+              </button>
+            </div>
+            {showLockerRoom && (
+              <LockerRoomReport
+                team1Info={teamAInfo}
+                team2Info={teamBInfo}
+                headToHeadData={data}
+              />
             )}
           </div>
 

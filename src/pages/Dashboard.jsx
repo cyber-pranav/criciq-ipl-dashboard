@@ -9,8 +9,6 @@ import {
   IconArrowDownRight,
 } from '@tabler/icons-react';
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   XAxis,
@@ -22,11 +20,12 @@ import {
 } from 'recharts';
 import useIPLStore from '../store/useIPLStore';
 import StatCard from '../components/stats/StatCard';
-import PlayerCard from '../components/stats/PlayerCard';
 import MatchCard from '../components/stats/MatchCard';
 import LiveTicker from '../components/layout/LiveTicker';
 import RunsChart from '../components/charts/RunsChart';
 import WicketHeatmap from '../components/charts/WicketHeatmap';
+import ClutchLeaderboard from '../components/analytics/ClutchLeaderboard';
+import DailyDigestBanner from '../components/ai/DailyDigestBanner';
 import { formatNumber } from '../utils/formatters';
 
 /* ━━━ Skeleton block helper ━━━ */
@@ -104,6 +103,9 @@ export default function Dashboard() {
   /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ RENDER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
   return (
     <div className="space-y-6">
+      {/* ── Daily Digest Banner ── */}
+      <DailyDigestBanner />
+
       {/* ── SECTION A: Hero Stats Row ── */}
       <section>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -150,10 +152,10 @@ export default function Dashboard() {
         <LiveTicker />
       </section>
 
-      {/* ── SECTION C: Two Column Layout ── */}
-      <section className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        {/* Left: Season Runs Timeline (60%) */}
-        <div className="lg:col-span-3 bg-surface border border-border rounded-lg p-5">
+      {/* ── SECTION C: Bento Grid — Main Dashboard ── */}
+      <section className="bento-grid">
+        {/* Season Runs Timeline (60%) */}
+        <div className="bento-3 bg-surface border border-border rounded-lg p-5">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted mb-4">
             Season Runs Timeline
           </h2>
@@ -164,8 +166,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Right: Top 5 Batsmen (40%) */}
-        <div className="lg:col-span-2 bg-surface border border-border rounded-lg p-5">
+        {/* Top 5 Batsmen (40%) */}
+        <div className="bento-2 bg-surface border border-border rounded-lg p-5">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted mb-4">
             Top 5 Batsmen This Season
           </h2>
@@ -182,18 +184,13 @@ export default function Dashboard() {
                   className="block"
                 >
                   <div className="flex items-center gap-3 group hover:bg-surface-hover rounded-md px-2 py-2 transition-colors">
-                    {/* Rank */}
                     <span className="text-muted font-mono text-sm w-5 text-right">
                       {b.rank}
                     </span>
-
-                    {/* Team color dot */}
                     <span
                       className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                       style={{ background: b.teamColor || '#00D4FF' }}
                     />
-
-                    {/* Player info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-text truncate">
                         {b.player || b.name}
@@ -223,7 +220,6 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Mini bar */}
                   <div className="ml-10 mr-2 mt-1 h-1 bg-border rounded-full overflow-hidden">
                     <div
                       className="h-full bg-cyan rounded-full transition-all duration-500"
@@ -237,7 +233,12 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* ── SECTION D: Bottom 3 Columns ── */}
+      {/* ── SECTION D: Clutch Index + Analytics ── */}
+      <section>
+        <ClutchLeaderboard />
+      </section>
+
+      {/* ── SECTION E: Bottom 3 Columns ── */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Col 1: Wicket Heatmap */}
         <div className="bg-surface border border-border rounded-lg p-5">

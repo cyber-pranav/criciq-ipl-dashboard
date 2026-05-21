@@ -98,11 +98,16 @@ export default function AskCricIQ() {
     try {
       // Call AI service
       const response = await askCricIQ(text);
-      const followUps = await generateFollowUps(text).catch(() => [
-        'Tell me more',
-        'Compare with another player',
-        'Show historical stats',
-      ]);
+      let followUps = [];
+      try {
+        followUps = generateFollowUps(response);
+      } catch (e) {
+        followUps = [
+          'Tell me more',
+          'Compare with another player',
+          'Show historical stats',
+        ];
+      }
 
       const aiMsg = {
         role: 'assistant',

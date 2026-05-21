@@ -1,5 +1,6 @@
 import React from 'react';
 import useThemeStore, { FRANCHISE_THEMES } from '../../store/useThemeStore';
+import { getTeams } from '../../services/iplData';
 
 const TEAM_IDS = Object.keys(FRANCHISE_THEMES).filter((k) => k !== 'default');
 
@@ -8,6 +9,8 @@ export default function FranchisePicker() {
   const setFranchise = useThemeStore((s) => s.setFranchise);
 
   if (!showPicker) return null;
+
+  const teamsList = getTeams();
 
   return (
     <div
@@ -36,7 +39,11 @@ export default function FranchisePicker() {
         {/* Team grid */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
           {TEAM_IDS.map((id) => {
-            const team = FRANCHISE_THEMES[id];
+            const theme = FRANCHISE_THEMES[id];
+            const info = teamsList.find((t) => t.id === id) || {
+              shortName: id.toUpperCase(),
+              name: theme.name,
+            };
             return (
               <button
                 key={id}
@@ -48,25 +55,24 @@ export default function FranchisePicker() {
                 "
                 style={{
                   borderLeftWidth: 4,
-                  borderLeftColor: team.primary,
+                  borderLeftColor: theme.primary,
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = team.primary;
-                  e.currentTarget.style.borderLeftColor = team.primary;
+                  e.currentTarget.style.borderColor = theme.primary;
+                  e.currentTarget.style.borderLeftColor = theme.primary;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = '';
-                  e.currentTarget.style.borderLeftColor = team.primary;
+                  e.currentTarget.style.borderLeftColor = theme.primary;
                 }}
               >
                 <span
-                  className="block text-sm font-bold leading-tight"
-                  style={{ color: team.primary }}
+                  className="block text-sm font-bold leading-tight text-text"
                 >
-                  {team.shortName}
+                  {info.shortName}
                 </span>
                 <span className="block text-[10px] text-muted leading-tight mt-0.5 truncate">
-                  {team.fullName}
+                  {info.name}
                 </span>
               </button>
             );

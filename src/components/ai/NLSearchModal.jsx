@@ -1,20 +1,64 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IconSearch, IconUser, IconShield, IconSparkles, IconX } from '@tabler/icons-react';
-import { searchPlayersAndTeams } from '../../services/iplData';
+import { searchPlayersAndTeams, getAllPlayers } from '../../services/iplData';
 import { askCricIQ } from '../../services/gemini';
+import { TEAMS } from '../../utils/constants';
+
+/**
+ * Try to match the query locally using regex patterns.
+ * Returns a navigation action or null if no match.
+ */
+function tryLocalParse(query) {
+  const q = query.toLowerCase().trim();
+
+  // "top N batsmen/bowlers"
+  const topMatch = q.match(/^top\s+(\d+)\s+(bat|bowl)/i);
+  if (topMatch) {
+    return { type: 'navigate', path: '/analytics', label: `Top ${topMatch[1]} ${topMatch[2]}ers` };
+  }
+
+  // Team short name match: "csk", "mi", "rcb" etc.
+  const teamMatch = TEAMS.find(
+    (t) => q === t.shortName.toLowerCase() || q === t.id || q === t.name.toLowerCase()
+  );
+  if (teamMatch) {
+    return { type: 'navigate', path: `/team/${teamMatch.id}`, label: teamMatch.name };
+  }
+
+  // "compare X vs Y" or "X vs Y"
+  const vsMatch = q.match(/(?:compare\s+)?(.+?)\s+vs?\s+(.+)/i);
+  if (vsMatch) {
+    const t1 = TEAMS.find((t) => vsMatch[1].trim().toLowerCase() === t.shortName.toLowerCase() || vsMatch[1].trim().toLowerCase() === t.id);
+    const t2 = TEAMS.find((t) => vsMatch[2].trim().toLowerCase() === t.shortName.toLowerCase() || vsMatch[2].trim().toLowerCase() === t.id);
+    if (t1 && t2) {
+      return { type: 'navigate', path: '/head-to-head', label: `${t1.shortName} vs ${t2.shortName}` };
+    }
+  }
+
+  // Direct player name match
+  const players = getAllPlayers();
+  const playerMatch = players.find(
+    (p) => p.name.toLowerCase() === q || p.name.toLowerCase().includes(q)
+  );
+  if (playerMatch && q.length >= 3) {
+    return { type: 'navigate', path: `/player/${playerMatch.id}`, label: playerMatch.name };
+  }
+
+  return null;
+}
 
 export default function NLSearchModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [localAction, setLocalAction] = useState(null);
   const [aiResponse, setAiResponse] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef(null);
   const navigate = useNavigate();
 
-  // Global Cmd+K / Ctrl+K listener
   useEffect(() => {
     const handler = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -29,27 +73,32 @@ export default function NLSearchModal() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Focus input when opened
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
       setQuery('');
       setResults([]);
       setAiResponse('');
+      setLocalAction(null);
       setSelectedIdx(0);
     }
   }, [isOpen]);
 
-  // Search on query change
+  // Search + local regex parsing on query change
   useEffect(() => {
     if (!query.trim()) {
       setResults([]);
       setAiResponse('');
+      setLocalAction(null);
       return;
     }
     const matches = searchPlayersAndTeams(query);
     setResults(matches.slice(0, 8));
     setSelectedIdx(0);
+
+    // Try local regex parsing
+    const action = tryLocalParse(query);
+    setLocalAction(action);
   }, [query]);
 
   const isQuestion = query.includes('?') || query.toLowerCase().startsWith('who') ||
@@ -127,6 +176,26 @@ export default function NLSearchModal() {
 
         {/* Results */}
         <div className="max-h-[400px] overflow-y-auto">
+          {/* Quick navigate from regex match */}
+          {localAction && (
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                navigate(localAction.path);
+              }}
+              className="w-full flex items-center gap-3 px-5 py-3 text-left bg-cyan/5 border-b border-border hover:bg-cyan/10 transition-colors"
+            >
+              <span className="text-cyan text-sm">⚡</span>
+              <div className="flex-1">
+                <p className="text-sm text-cyan font-medium">Go to {localAction.label}</p>
+                <p className="text-[10px] text-muted">{localAction.path}</p>
+              </div>
+              <kbd className="text-[10px] text-muted bg-navy border border-border rounded px-1.5 py-0.5 font-mono">
+                ↵
+              </kbd>
+            </button>
+          )}
+
           {results.length > 0 && (
             <div className="py-2">
               {results.map((item, idx) => (

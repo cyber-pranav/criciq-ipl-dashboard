@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
 import Dashboard from './pages/Dashboard';
@@ -24,29 +25,31 @@ export default function App() {
   }, [loadDashboardData, applyTheme]);
 
   return (
-    <BrowserRouter>
-      <div className="flex min-h-screen bg-navy text-text">
-        <Sidebar />
-        <div className="flex-1 flex flex-col min-h-screen md:ml-60">
-          <TopBar />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/players" element={<Navigate to="/" replace />} />
-              <Route path="/player/:playerId" element={<PlayerProfile />} />
-              <Route path="/teams" element={<Navigate to="/team/csk" replace />} />
-              <Route path="/team/:teamId" element={<TeamAnalysis />} />
-              <Route path="/head-to-head" element={<HeadToHead />} />
-              <Route path="/ask" element={<AskAI />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/what-if" element={<WhatIf />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </main>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <div className="flex min-h-screen bg-navy text-text">
+          <Sidebar />
+          <div className="flex-1 flex flex-col min-h-screen md:ml-60">
+            <TopBar />
+            <main className="flex-1 overflow-y-auto p-4 md:p-6">
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/players" element={<Navigate to="/" replace />} />
+                <Route path="/player/:playerId" element={<PlayerProfile />} />
+                <Route path="/teams" element={<Navigate to="/team/csk" replace />} />
+                <Route path="/team/:teamId" element={<TeamAnalysis />} />
+                <Route path="/head-to-head" element={<HeadToHead />} />
+                <Route path="/ask" element={<AskAI />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/what-if" element={<WhatIf />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </main>
+          </div>
+          <FranchisePicker />
+          <NLSearchModal />
         </div>
-        <FranchisePicker />
-        <NLSearchModal />
-      </div>
-    </BrowserRouter>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

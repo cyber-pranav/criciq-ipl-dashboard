@@ -23,6 +23,7 @@ import {
 import useIPLStore from '../store/useIPLStore';
 import PlayerCard from '../components/stats/PlayerCard';
 import StatTable from '../components/stats/StatTable';
+import PhaseRadar from '../components/analytics/PhaseRadar';
 import { formatNumber } from '../utils/formatters';
 import { getTeamWinRate, getAllPlayers, MATCHES_DATA, TEAMS_DATA } from '../services/iplData';
 
@@ -369,6 +370,17 @@ export default function TeamAnalysis() {
             ) : (
               <p className="text-muted text-sm">No recommendation available</p>
             )}
+          </div>
+
+          {/* ── Row 5: Phase Intelligence ── */}
+          <div className="bg-surface border border-border rounded-lg p-5">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted mb-4">
+              ⚡ Phase Intelligence
+            </h2>
+            <p className="text-xs text-muted mb-4">
+              Per-phase performance breakdown — scoring rate, wicket loss, and boundary frequency
+            </p>
+            <PhaseRadar team={currentTeam?.shortName || teamId?.toUpperCase()} />
           </div>
         </>
       )}

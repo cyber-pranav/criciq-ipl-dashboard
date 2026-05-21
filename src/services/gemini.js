@@ -1,5 +1,6 @@
 // src/services/gemini.js
 // Gemini AI service for CricIQ intelligent assistant
+import { API_TIMEOUT_MS, CACHE_TTL_MS } from '../utils/constants';
 
 const SYSTEM_PROMPT =
   'You are CricIQ, an expert IPL cricket analyst. You have access to IPL data from 2008-2024. ' +
@@ -15,21 +16,77 @@ const DEMO_RESPONSES = [
 ];
 
 /**
- * Send a question to the Gemini API and get an IPL-expert response.
- * Falls back to a rotating demo response when no API key is configured.
+ * Simple hash function for cache keys.
+ * @param {string} str
+ * @returns {string}
+ */
+function hashString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return 'criciq-cache-' + Math.abs(hash).toString(36);
+}
+
+/**
+ * Check localStorage cache for a previous response.
+ * @param {string} key - Cache key
+ * @returns {string|null} - Cached response or null if expired/missing
+ */
+function getCachedResponse(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { response, timestamp } = JSON.parse(raw);
+    if (Date.now() - timestamp > CACHE_TTL_MS) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return response;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Store a response in localStorage cache.
+ * @param {string} key - Cache key
+ * @param {string} response - Response text to cache
+ */
+function setCachedResponse(key, response) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ response, timestamp: Date.now() }));
+  } catch {
+    // Storage full — silently ignore
+  }
+}
+
+/**
+ * Send a question to the Gemini 2.5 Flash API and get an IPL-expert response.
+ * Features:
+ * - 10-second AbortController timeout
+ * - localStorage response caching (24-hour TTL)
+ * - Explicit error logging for 400/401/429 status codes
+ * - Falls back to a rotating demo response when no API key is configured
  *
  * @param {string} userMessage  The user's question
- * @param {string} context      Optional additional context (e.g. current dashboard state)
+ * @param {string} [context=''] Optional additional context (e.g. current dashboard state)
  * @returns {Promise<string>}   The assistant's reply
  */
 export async function askCricIQ(userMessage, context = '') {
   const apiKey = import.meta.env.VITE_GEMINI_KEY;
 
   if (!apiKey) {
-    console.info('[CricIQ] No Gemini API key — returning demo response');
-    await new Promise((r) => setTimeout(r, 600)); // simulate network latency
+    await new Promise((r) => setTimeout(r, 600));
     return DEMO_RESPONSES[Math.floor(Math.random() * DEMO_RESPONSES.length)];
   }
+
+  // Check cache first
+  const cacheKey = hashString(userMessage + context);
+  const cached = getCachedResponse(cacheKey);
+  if (cached) return cached;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
@@ -52,15 +109,35 @@ export async function askCricIQ(userMessage, context = '') {
     },
   };
 
+  // AbortController for 10-second timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
+      // Explicit status code logging for diagnostics
+      if (res.status === 401) {
+        console.error('[CricIQ] Gemini 401 — invalid API key:', errData);
+        return 'API key error — please check your Gemini API key configuration.';
+      }
+      if (res.status === 429) {
+        console.error('[CricIQ] Gemini 429 — rate limit exceeded:', errData);
+        return 'I\'m getting too many questions right now! Give me a moment and try again.';
+      }
+      if (res.status === 400) {
+        console.error('[CricIQ] Gemini 400 — bad request:', errData);
+        return 'Something went wrong with that question. Could you rephrase it?';
+      }
       console.error('[CricIQ] Gemini API error:', res.status, errData);
       return 'Sorry, I\'m having trouble connecting to my brain right now. Try again in a moment!';
     }
@@ -69,15 +146,26 @@ export async function askCricIQ(userMessage, context = '') {
     const text =
       data?.candidates?.[0]?.content?.parts?.[0]?.text ||
       'Hmm, I couldn\'t come up with an answer. Could you rephrase that?';
-    return text.trim();
+    const trimmed = text.trim();
+
+    // Cache the successful response
+    setCachedResponse(cacheKey, trimmed);
+
+    return trimmed;
   } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      console.error('[CricIQ] Gemini request timed out after', API_TIMEOUT_MS, 'ms');
+      return 'The AI is taking too long to respond. Please try again.';
+    }
     console.error('[CricIQ] Gemini fetch failed:', err);
     return 'Network error — please check your connection and try again.';
   }
 }
 
 /**
- * Generate 3 follow-up questions a fan might ask next.
+ * Generate 3 contextual follow-up questions a fan might ask next,
+ * based on keywords in the last assistant response.
  *
  * @param {string} response  The last assistant response to derive follow-ups from
  * @returns {string[]}       Three follow-up question strings
@@ -93,7 +181,6 @@ export function generateFollowUps(response) {
 
   const lower = response.toLowerCase();
 
-  // Contextual follow-ups based on keywords in the response
   if (lower.includes('kohli') || lower.includes('virat')) {
     return [
       'How does Kohli\'s strike rate compare to other top scorers?',
@@ -134,7 +221,6 @@ export function generateFollowUps(response) {
     ];
   }
 
-  // Default follow-ups
   return [
     'Who are the top 5 run-scorers this season?',
     'Which team has the best win percentage?',

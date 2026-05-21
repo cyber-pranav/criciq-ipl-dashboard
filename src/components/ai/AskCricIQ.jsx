@@ -66,13 +66,14 @@ function MessageBubble({ message, onFollowUp }) {
   );
 }
 
-export default function AskCricIQ() {
+export default function AskCricIQ({ initialQuery = '' }) {
   const chatMessages = useIPLStore((s) => s.chatMessages) || [];
   const addChatMessage = useIPLStore((s) => s.addChatMessage);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const initialQuerySent = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -81,6 +82,16 @@ export default function AskCricIQ() {
   useEffect(() => {
     scrollToBottom();
   }, [chatMessages, isLoading]);
+
+  // Auto-send initialQuery on mount (e.g. from /ask?q=... or PlayerProfile link)
+  useEffect(() => {
+    if (initialQuery && !initialQuerySent.current) {
+      initialQuerySent.current = true;
+      // Small delay to allow UI to mount before sending
+      const timer = setTimeout(() => handleSend(initialQuery), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [initialQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSend = async (question) => {
     const text = question || input.trim();

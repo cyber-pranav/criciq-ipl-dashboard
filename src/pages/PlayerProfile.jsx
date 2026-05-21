@@ -33,6 +33,8 @@ import usePlayerStats from '../hooks/usePlayerStats';
 import PerformanceRadar from '../components/charts/PerformanceRadar';
 import StatTable from '../components/stats/StatTable';
 import { formatNumber } from '../utils/formatters';
+import { calculateBattingClutch, calculateBowlingClutch } from '../utils/clutchIndex';
+import { ARCHETYPES } from '../utils/constants';
 
 /* ━━━ Constants ━━━ */
 const ROLE_COLORS = {
@@ -80,6 +82,25 @@ export default function PlayerProfile() {
   const role = (player?.role || 'batsman').toLowerCase();
   const hasBowling = (player?.wickets ?? 0) > 0 || bowlingSeasons?.length > 0;
   const visibleTabs = hasBowling ? TABS : TABS.filter((t) => t.key !== 'bowling');
+
+  // Clutch Index computation
+  const clutch = useMemo(() => {
+    if (!player) return null;
+    return role === 'bowler'
+      ? calculateBowlingClutch(player)
+      : calculateBattingClutch(player);
+  }, [player, role]);
+
+  // Archetype label from radar scores
+  const archetype = useMemo(() => {
+    if (!radarData?.length) return null;
+    const scores = {};
+    radarData.forEach((d) => { scores[d.stat] = d.value; });
+    for (const a of ARCHETYPES) {
+      try { if (a.condition(scores)) return a; } catch { /* skip */ }
+    }
+    return null;
+  }, [radarData]);
 
   /* ── Innings table columns ── */
   const inningsColumns = useMemo(
@@ -162,7 +183,7 @@ export default function PlayerProfile() {
         </div>
 
         {/* Key stats inline */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-6">
           {[
             { label: 'Matches', value: player.matches ?? 0 },
             { label: 'Runs', value: player.runs ?? 0 },
@@ -176,7 +197,42 @@ export default function PlayerProfile() {
               </p>
             </div>
           ))}
+
+          {/* Clutch Index Badge */}
+          {clutch && (
+            <div className="text-center">
+              <p className="text-muted text-xs uppercase tracking-wider">Clutch Index</p>
+              <p className="font-mono text-2xl font-bold mt-1" style={{ color: clutch.color }}>
+                {clutch.emoji} {clutch.score}
+              </p>
+              <span
+                className="clutch-badge inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded mt-1"
+                style={{ background: clutch.color + '20', color: clutch.color }}
+              >
+                {clutch.category}
+              </span>
+            </div>
+          )}
         </div>
+
+        {/* Transfer Market Value */}
+        {clutch && (
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <span
+              className="transfer-value-badge"
+              style={{
+                background: clutch.color + '15',
+                border: `1px solid ${clutch.color}40`,
+                color: clutch.color,
+              }}
+            >
+              💰 Estimated Auction Value:&nbsp;
+              <strong>
+                {clutch.badge === 'elite' ? '₹16–20 Cr' : clutch.badge === 'reliable' ? '₹8–15 Cr' : '₹2–7 Cr'}
+              </strong>
+            </span>
+          </div>
+        )}
       </section>
 
       {/* ━━━ TAB NAVIGATION ━━━ */}
@@ -217,9 +273,19 @@ export default function PlayerProfile() {
               {/* Radar chart */}
               <div className="bg-surface border border-border rounded-lg p-5">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-muted mb-4">
-                  Batting Profile
+                  {role === 'bowler' ? 'Bowling Profile' : 'Batting Profile'}
                 </h3>
                 <PerformanceRadar data={radarData} />
+
+                {/* Archetype Label */}
+                {archetype && (
+                  <div className="mt-3 text-center">
+                    <span className="inline-flex items-center gap-1.5 bg-navy border border-border rounded-full px-3 py-1.5 text-xs font-semibold text-text">
+                      <span>{archetype.emoji}</span>
+                      <span>{archetype.label}</span>
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

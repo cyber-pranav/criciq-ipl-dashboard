@@ -75,17 +75,30 @@ export default function usePlayerStats(playerId) {
     }));
   }, [career]);
 
-  // Radar data for Recharts RadarChart
+  // Radar data — role-specific axes per Master Prompt spec
   const radarData = useMemo(() => {
     if (!player) return [];
     const clamp = (v) => Math.min(100, Math.max(0, Math.round(v)));
+    const isBowler = (player.role || '').toLowerCase() === 'bowler';
+
+    if (isBowler) {
+      // Bowler axes: Economy Control, Wicket-Taking, Death Mastery, Variation, Big Match
+      return [
+        { stat: 'Economy Control', value: clamp(((12 - (player.economy || 8)) / 12) * 100), fullMark: 100 },
+        { stat: 'Wicket-Taking',   value: clamp(((player.wickets || 0) / 200) * 100), fullMark: 100 },
+        { stat: 'Death Mastery',   value: clamp(((player.economy || 8) < 8 ? 80 : 40) + ((player.wickets || 0) / 250) * 20), fullMark: 100 },
+        { stat: 'Variation',       value: clamp(((player.matches || 0) / 200) * 60 + ((player.wickets || 0) / 200) * 40), fullMark: 100 },
+        { stat: 'Big Match',       value: clamp(((player.wickets || 0) / 180) * 70 + ((player.matches || 0) > 100 ? 30 : 15)), fullMark: 100 },
+      ];
+    }
+
+    // Batter/All-rounder axes: Impact, Consistency, Power, Clutch, Longevity
     return [
-      { stat: 'Power', value: clamp(((player.strikeRate || 0) / 200) * 100), fullMark: 100 },
-      { stat: 'Average', value: clamp(((player.average || 0) / 60) * 100), fullMark: 100 },
-      { stat: 'Runs', value: clamp(((player.runs || 0) / 8000) * 100), fullMark: 100 },
-      { stat: 'Wickets', value: clamp(((player.wickets || 0) / 200) * 100), fullMark: 100 },
-      { stat: 'Economy', value: player.economy ? clamp(((12 - player.economy) / 12) * 100) : 0, fullMark: 100 },
-      { stat: 'Impact', value: clamp((((player.fifties || 0) + (player.hundreds || 0) * 3) / 80) * 100), fullMark: 100 },
+      { stat: 'Impact',      value: clamp((((player.fifties || 0) + (player.hundreds || 0) * 3) / 70) * 100), fullMark: 100 },
+      { stat: 'Consistency', value: clamp(((player.average || 0) / 50) * 100), fullMark: 100 },
+      { stat: 'Power',       value: clamp(((player.strikeRate || 0) / 180) * 100), fullMark: 100 },
+      { stat: 'Clutch',      value: clamp(((player.strikeRate || 0) / 200) * 50 + ((player.average || 0) / 60) * 50), fullMark: 100 },
+      { stat: 'Longevity',   value: clamp(((player.matches || 0) / 250) * 100), fullMark: 100 },
     ];
   }, [player]);
 
@@ -120,20 +133,25 @@ export default function usePlayerStats(playerId) {
     return items;
   }, [player, career]);
 
-  // Performance vs each team (simulated from match data)
+  // Performance vs each team (deterministic simulation from player + team indices)
   const teamRecord = useMemo(() => {
     if (!player) return [];
     const teams = TEAMS_DATA || [];
+    // Seeded PRNG: produces deterministic values per player+team combo
+    const seeded = (a, b) => {
+      const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+      return x - Math.floor(x);
+    };
     return teams
       .filter((t) => t.shortName !== player.team)
       .slice(0, 8)
-      .map((t) => ({
+      .map((t, idx) => ({
         team: t.shortName,
-        matches: Math.floor(Math.random() * 15) + 5,
-        runs: Math.floor(Math.random() * 400) + 100,
-        average: (Math.random() * 30 + 15).toFixed(1),
-        strikeRate: (Math.random() * 40 + 110).toFixed(1),
-        best: Math.floor(Math.random() * 60 + 30) + (Math.random() > 0.5 ? '*' : ''),
+        matches: Math.floor(seeded(player.id, idx * 1) * 15) + 5,
+        runs: Math.floor(seeded(player.id, idx * 2) * 400) + 100,
+        average: (seeded(player.id, idx * 3) * 30 + 15).toFixed(1),
+        strikeRate: (seeded(player.id, idx * 4) * 40 + 110).toFixed(1),
+        best: Math.floor(seeded(player.id, idx * 5) * 60 + 30) + (seeded(player.id, idx * 6) > 0.5 ? '*' : ''),
       }));
   }, [player]);
 

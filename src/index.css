@@ -382,3 +382,85 @@ body {
   border-radius: 50%;
 }
 
+/* ━━━ SYNTHWAVE THEME OVERRIDES ━━━ */
+.synthwave {
+  --color-navy: #0D0D1A;
+  --color-surface: #12102A;
+  --color-border: #2A1F4E;
+  --color-cyan: #00FFE1;
+  --color-text: #F0F0FF;
+  --color-muted: #8B7CB5;
+  --color-surface-hover: #1A1640;
+}
+
+.synthwave body,
+.synthwave #root {
+  background: #0D0D1A;
+}
+
+/* Neon glow on Recharts lines */
+.synthwave .recharts-line .recharts-line-curve {
+  filter: drop-shadow(0 0 6px #00FFE1);
+}
+.synthwave .recharts-area .recharts-area-curve {
+  filter: drop-shadow(0 0 4px #00FFE1);
+}
+
+/* Neon border glow on cards */
+.synthwave .bg-surface {
+  box-shadow: 0 0 1px #2A1F4E, inset 0 1px 0 rgba(224, 64, 251, 0.05);
+}
+
+/* Accent color shifts */
+.synthwave .text-cyan {
+  color: #00FFE1 !important;
+  text-shadow: 0 0 8px rgba(0, 255, 225, 0.3);
+}
+.synthwave .bg-cyan {
+  background: linear-gradient(135deg, #00FFE1, #E040FB) !important;
+  color: #0D0D1A !important;
+}
+.synthwave .border-cyan {
+  border-color: #E040FB !important;
+}
+
+/* Gradient top bar */
+.synthwave .topbar-gradient {
+  background: linear-gradient(90deg, #0D0D1A 0%, #1A0A2E 50%, #0D0D1A 100%) !important;
+}
+
+/* Sidebar neon accent */
+.synthwave .sidebar-active {
+  border-left-color: #E040FB !important;
+  background: rgba(224, 64, 251, 0.08) !important;
+}
+
+/* Glowing scrollbar */
+.synthwave ::-webkit-scrollbar-thumb {
+  background: #2A1F4E;
+}
+.synthwave ::-webkit-scrollbar-thumb:hover {
+  background: #E040FB;
+}
+
+/* Chip neon */
+.synthwave .chip {
+  border-color: #2A1F4E;
+}
+.synthwave .chip:hover {
+  border-color: #E040FB;
+  color: #E040FB;
+  box-shadow: 0 0 6px rgba(224, 64, 251, 0.3);
+}
+
+/* Transfer Market Value badge */
+.transfer-value-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}

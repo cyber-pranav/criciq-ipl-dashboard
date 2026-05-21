@@ -64,6 +64,7 @@ export default function Dashboard() {
   const topBatsmen = useIPLStore((s) => s.topBatsmen);
   const topBowlers = useIPLStore((s) => s.topBowlers);
   const recentMatches = useIPLStore((s) => s.recentMatches);
+  const fanTeam = useIPLStore((s) => s.fanTeam);
 
   /* ── Derived hero stats ── */
   const heroStats = useMemo(() => {
@@ -76,13 +77,23 @@ export default function Dashboard() {
     };
   }, [seasonStats]);
 
-  /* ── Top 5 batsmen with bar proportions ── */
+  /* ── Top 5 batsmen with bar proportions, fan team first ── */
   const top5Batsmen = useMemo(() => {
     if (!topBatsmen?.length) return [];
     const slice = topBatsmen.slice(0, 5);
     const maxRuns = Math.max(...slice.map((b) => b.runs || 0), 1);
-    return slice.map((b, idx) => ({ ...b, rank: idx + 1, proportion: ((b.runs || 0) / maxRuns) * 100 }));
-  }, [topBatsmen]);
+    const ranked = slice.map((b, idx) => ({
+      ...b,
+      rank: idx + 1,
+      proportion: ((b.runs || 0) / maxRuns) * 100,
+      isFanTeam: fanTeam && (b.team || '').toLowerCase() === fanTeam.toLowerCase(),
+    }));
+    // Reorder: fan team players first, then others (preserve original ranking within groups)
+    if (fanTeam) {
+      return [...ranked.filter((b) => b.isFanTeam), ...ranked.filter((b) => !b.isFanTeam)];
+    }
+    return ranked;
+  }, [topBatsmen, fanTeam]);
 
   /* ── Top 5 bowlers for economy chart ── */
   const top5Bowlers = useMemo(() => {
@@ -183,7 +194,7 @@ export default function Dashboard() {
                   to={`/player/${b.id || b.playerId || b.rank}`}
                   className="block"
                 >
-                  <div className="flex items-center gap-3 group hover:bg-surface-hover rounded-md px-2 py-2 transition-colors">
+                  <div className={`flex items-center gap-3 group hover:bg-surface-hover rounded-md px-2 py-2 transition-colors ${b.isFanTeam ? 'border-l-2 border-cyan bg-cyan/5' : ''}`}>
                     <span className="text-muted font-mono text-sm w-5 text-right">
                       {b.rank}
                     </span>

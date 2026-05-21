@@ -1,5 +1,6 @@
 import React from 'react';
 import useThemeStore, { FRANCHISE_THEMES } from '../../store/useThemeStore';
+import useIPLStore from '../../store/useIPLStore';
 import { getTeams } from '../../services/iplData';
 
 const TEAM_IDS = Object.keys(FRANCHISE_THEMES).filter((k) => k !== 'default');
@@ -7,10 +8,18 @@ const TEAM_IDS = Object.keys(FRANCHISE_THEMES).filter((k) => k !== 'default');
 export default function FranchisePicker() {
   const showPicker = useThemeStore((s) => s.showPicker);
   const setFranchise = useThemeStore((s) => s.setFranchise);
+  const setFanTeam = useIPLStore((s) => s.setFanTeam);
 
   if (!showPicker) return null;
 
   const teamsList = getTeams();
+
+  const handleSelect = (id) => {
+    // 1. Apply theme visuals
+    setFranchise(id);
+    // 2. Persist fan team preference (localStorage now, Firestore upgrade later)
+    setFanTeam(id === 'default' ? null : id);
+  };
 
   return (
     <div
@@ -32,7 +41,7 @@ export default function FranchisePicker() {
         <div className="mb-5">
           <h2 className="text-lg font-bold text-text">Choose Your Franchise</h2>
           <p className="text-muted text-xs mt-1">
-            Your dashboard will adapt to your team's identity
+            Your dashboard will adapt to your team's identity — stats, colors, and player highlights
           </p>
         </div>
 
@@ -47,7 +56,7 @@ export default function FranchisePicker() {
             return (
               <button
                 key={id}
-                onClick={() => setFranchise(id)}
+                onClick={() => handleSelect(id)}
                 className="
                   text-left bg-navy border border-border rounded-lg px-3 py-3
                   transition-colors duration-150 cursor-pointer
@@ -81,7 +90,7 @@ export default function FranchisePicker() {
 
         {/* Stay Neutral */}
         <button
-          onClick={() => setFranchise('default')}
+          onClick={() => handleSelect('default')}
           className="
             mt-4 w-full py-2 rounded-lg text-xs font-medium uppercase tracking-widest
             text-muted bg-navy border border-border

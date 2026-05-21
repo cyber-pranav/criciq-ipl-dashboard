@@ -180,19 +180,15 @@ Format your response with EXACTLY these 4 sections (use these exact headers):
               return (
                 <div
                   key={s.key}
-                  className="p-3 rounded-lg"
-                  style={{
-                    background: 'rgba(0,212,255,0.04)',
-                    border: '1px solid var(--color-border)',
-                  }}
+                  className="p-3 rounded-lg bg-[#0D121F] border border-border"
                 >
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <span className="text-xs">{s.icon}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-cyan">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-400">
                       {s.label}
                     </span>
                   </div>
-                  <p className="text-xs text-text leading-relaxed whitespace-pre-wrap">
+                  <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap">
                     {content}
                   </p>
                 </div>
